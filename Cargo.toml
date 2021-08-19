@@ -7,4 +7,3 @@ edition = "2018"
 
 [dependencies]
 winapi = { version = "0.3", features = ["winuser", "dwmapi", "d3d9", "d3d9types", "memoryapi"] }
-lazy_static = "1.4.0"

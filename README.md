@@ -3,7 +3,7 @@ DirectX overlay written in Rust for various projects, wanted to easily create ov
 
 # dependencies
 * winapi
-* lazy_static
+* ~~lazy_static~~
 
 # usage
 ```rust

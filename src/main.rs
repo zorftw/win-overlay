@@ -4,9 +4,6 @@ use winapi::{shared::d3d9types::D3DCOLOR_RGBA};
 compile_error!("win-overlay is exclusive to windows.");
 
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 pub mod utils;
 pub mod win_overlay;
 
@@ -17,7 +14,7 @@ pub fn main() {
         let overlay = win_overlay::Overlay::create_overlay(target);
 
         overlay.draw(&|| {
-            overlay.draw_filled_box(20, 20, 100, 100, D3DCOLOR_RGBA(255, 0, 0, 255));
+            overlay.draw_filled_box(0, 0, 1, 1, D3DCOLOR_RGBA(255, 0, 0, 255));
         });
     });
 

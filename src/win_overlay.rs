@@ -21,18 +21,13 @@ use winapi::{
         winuser::{
             CreateWindowExA, DefWindowProcA, DestroyWindow, GetWindowRect, LoadCursorW,
             RegisterClassExA, SetLayeredWindowAttributes, SetWindowPos, ShowWindow, CS_HREDRAW,
-            CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOMOVE, SWP_NOSIZE, SW_SHOW,
+            CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOSIZE, SW_SHOW,
             WM_DESTROY, WNDCLASSEXA, WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_POPUP, WS_VISIBLE,
         },
     },
 };
 
-lazy_static! {
-    static ref OVERLAY: Mutex<Overlay> = Mutex::new(Overlay::default());
-    static ref LAST_TIME: Mutex<SystemTime> = Mutex::new(SystemTime::now());
-}
-
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct Overlay {
     _target: usize,
     _overlay: usize,
@@ -43,32 +38,6 @@ pub struct Overlay {
 
 #[no_mangle]
 unsafe extern "system" fn wnd_proc(wnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    // set position of our window incase the target window moves
-    {
-        let overlay = OVERLAY.lock().unwrap();
-
-        let mut rectangle = RECT {
-            bottom: 0,
-            left: 0,
-            right: 0,
-            top: 0,
-        };
-
-        // Get rectangle
-        GetWindowRect(overlay.get_target(), &mut rectangle);
-
-        // set position
-        SetWindowPos(
-            overlay.get_target(),
-            overlay.get_overlay(),
-            rectangle.left,
-            rectangle.top,
-            rectangle.right - rectangle.left,
-            rectangle.bottom - rectangle.top,
-            SWP_NOMOVE | SWP_NOSIZE,
-        );
-    }
-
     match msg {
         WM_DESTROY => std::process::exit(0),
         _ => {}
@@ -95,6 +64,7 @@ impl Overlay {
         }
     }
 
+    /// Begin drawing loop
     pub fn draw(&self, func: &dyn Fn()) {
         loop {
             self.begin_drawing();
@@ -105,6 +75,7 @@ impl Overlay {
         }
     }
 
+    /// Set up drawing
     pub fn begin_drawing(&self) {
         self.ensure_position();
 
@@ -123,24 +94,9 @@ impl Overlay {
         }
     }
 
+    /// Finish up drawing
     pub fn end_drawing(&self) {
-        //static mut FPS: i32 = 0;
-        //let last_time = LAST_TIME.lock().unwrap();
-
         unsafe {
-            // FPS += 1;
-
-            // if SystemTime::now()
-            //     .duration_since(*last_time)
-            //     .expect("Somehow unable to get difference in time...")
-            //     >= std::time::Duration::from_secs(1)
-            // {
-            //     *LAST_TIME.lock().unwrap() = SystemTime::now();
-
-            //     self._fps = FPS;
-            //     FPS = 0;
-            // }
-
             let device = self.get_device();
             (*device).EndScene();
             (*device).Present(
@@ -152,6 +108,7 @@ impl Overlay {
         }
     }
 
+    /// Draws a filled rectangle
     pub fn draw_filled_box(&self, x: i32, y: i32, w: i32, h: i32, color: u32) {
         unsafe {
             let device = self.get_device();
@@ -163,11 +120,11 @@ impl Overlay {
                 y2: y + h,
             };
 
-            //device.Clear(1, &const rect as *const _, D3DCLEAR_TARGET, color, 0, 0);
             (*device).Clear(1, &rect as *const _, D3DCLEAR_TARGET, color, 0f32, 0);
         }
     }
 
+    /// Draws a box
     pub fn draw_box(&self, x: i32, y: i32, w: i32, h: i32, t: i32, color: u32) {
         self.draw_filled_box(x, y, t, h, color); // draw left vertical
         self.draw_filled_box(x + w, y, t, h, color); // draw right vertical
@@ -187,6 +144,7 @@ impl Overlay {
         self._device as *mut _
     }
 
+    /// Get rectangle of target window
     pub fn get_rect(&self) -> RECT {
         let rect = [0i8; std::mem::size_of::<RECT>()].as_mut_ptr() as *mut RECT;
 
@@ -205,6 +163,7 @@ impl Overlay {
         self._target as HWND
     }
 
+    /// Initialize DirectX
     pub fn init_dx9(&mut self) {
         // create object
         let d3d = unsafe { Direct3DCreate9(D3D_SDK_VERSION) };
@@ -255,6 +214,7 @@ impl Overlay {
         self._device = device as usize;
     }
 
+    /// Spawn an overlay
     pub fn create_overlay(target: HWND) -> Self {
         let mut wc = WNDCLASSEXA {
             cbSize: std::mem::size_of::<WNDCLASSEXA>() as u32,
@@ -341,8 +301,6 @@ impl Overlay {
 impl Drop for Overlay {
     /// Drop for overlay, handles the window we created, and the DirectX context.
     fn drop(&mut self) {
-        println!("Overlay dropped...");
-
         if self._overlay != 0usize {
             unsafe {
                 DestroyWindow(self.get_overlay());
