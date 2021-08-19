@@ -1,20 +1,9 @@
 use std::{sync::Mutex, time::SystemTime};
 
-use winapi::{
-    shared::{
-        d3d9::{
+use winapi::{shared::{d3d9::{
             Direct3DCreate9, IDirect3D9, IDirect3DDevice9, D3DADAPTER_DEFAULT,
             D3DCREATE_HARDWARE_VERTEXPROCESSING, D3D_SDK_VERSION,
-        },
-        d3d9caps::D3DPRESENT_INTERVAL_IMMEDIATE,
-        d3d9types::{
-            D3DCLEAR_TARGET, D3DCOLOR_ARGB, D3DDEVTYPE_HAL, D3DFMT_A8R8G8B8, D3DPRESENT_PARAMETERS,
-            D3DRECT, D3DSWAPEFFECT_DISCARD,
-        },
-        minwindef::{LPARAM, LRESULT, WPARAM},
-        windef::{HWND, RECT},
-    },
-    um::{
+        }, d3d9caps::D3DPRESENT_INTERVAL_IMMEDIATE, d3d9types::{D3DCLEAR_TARGET, D3DCOLOR_ARGB, D3DDEVTYPE_HAL, D3DFMT_A8R8G8B8, D3DMULTISAMPLE_NONE, D3DPRESENT_PARAMETERS, D3DPRESENT_RATE_DEFAULT, D3DRECT, D3DSWAPEFFECT_DISCARD}, minwindef::{LPARAM, LRESULT, WPARAM}, windef::{HWND, RECT}}, um::{
         dwmapi::DwmExtendFrameIntoClientArea,
         uxtheme::MARGINS,
         wingdi::{CreateSolidBrush, RGB},
@@ -24,8 +13,7 @@ use winapi::{
             CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOSIZE, SW_SHOW,
             WM_DESTROY, WNDCLASSEXA, WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_POPUP, WS_VISIBLE,
         },
-    },
-};
+    }};
 
 #[derive(Default, Clone, Debug)]
 pub struct Overlay {
@@ -175,22 +163,21 @@ impl Overlay {
         // set it
         self._d3d = d3d as usize;
 
-        // Create present
-        let present = [0i8; std::mem::size_of::<D3DPRESENT_PARAMETERS>()].as_mut_ptr()
-            as *mut D3DPRESENT_PARAMETERS;
-
         // Get dimensions
         let rect = self.get_rect();
 
-        unsafe {
-            (*present).Windowed = 1;
-            (*present).SwapEffect = D3DSWAPEFFECT_DISCARD;
-            (*present).BackBufferFormat = D3DFMT_A8R8G8B8;
-            (*present).BackBufferWidth = (rect.right - rect.left) as u32;
-            (*present).BackBufferHeight = (rect.bottom - rect.top) as u32;
-            (*present).hDeviceWindow = self.get_overlay();
-            (*present).PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-        }
+        // Create paramaters for present
+        let mut present = unsafe { D3DPRESENT_PARAMETERS {
+            BackBufferCount: 1,
+            SwapEffect: D3DSWAPEFFECT_DISCARD,
+            hDeviceWindow: self.get_overlay(),
+            PresentationInterval: D3DPRESENT_INTERVAL_IMMEDIATE,
+            BackBufferFormat: D3DFMT_A8R8G8B8,
+            Windowed: 1,
+            BackBufferWidth: (rect.right - rect.left) as u32,
+            BackBufferHeight: (rect.bottom - rect.top) as u32,
+            ..core::mem::zeroed()
+        }};
 
         let mut device = std::ptr::null_mut();
 
@@ -200,7 +187,7 @@ impl Overlay {
                 D3DDEVTYPE_HAL,
                 self.get_overlay(),
                 D3DCREATE_HARDWARE_VERTEXPROCESSING,
-                present,
+                &mut present,
                 &mut device,
             )
         } < 0

@@ -9,12 +9,12 @@ pub mod win_overlay;
 
 pub fn main() {
     let runtime = std::panic::catch_unwind(|| {
-        let target = utils::find_window(Some("LWJGL"), None).expect("Couldn't find window...");
+        let target = utils::find_window(Some(native_str!("LWJGL")), None).expect("Couldn't find window...");
 
         let overlay = win_overlay::Overlay::create_overlay(target);
 
         overlay.draw(&|| {
-            overlay.draw_filled_box(0, 0, 1, 1, D3DCOLOR_RGBA(255, 0, 0, 255));
+            overlay.draw_filled_box(0, 0, 30, 30, D3DCOLOR_RGBA(255, 0, 0, 255));
         });
     });
 

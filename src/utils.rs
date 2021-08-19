@@ -6,15 +6,15 @@ macro_rules! native_str {
 
 use winapi::{shared::windef::HWND, um::winuser::FindWindowA};
 
-pub fn find_window(class: Option<&str>, name: Option<&str>) -> Option<HWND> {
+pub fn find_window(class: Option<*const i8>, name: Option<*const i8>) -> Option<HWND> {
     let hwnd = unsafe {
         FindWindowA(
             match class {
-                Some(e) => native_str!(e),
+                Some(e) => e,
                 _ => std::ptr::null_mut(),
             },
             match name {
-                Some(e) => native_str!(e),
+                Some(e) => e,
                 _ => std::ptr::null_mut(),
             },
         )
