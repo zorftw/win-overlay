@@ -1,19 +1,30 @@
-
-
-use winapi::{shared::{d3d9::{
+use winapi::{
+    shared::{
+        d3d9::{
             Direct3DCreate9, IDirect3D9, IDirect3DDevice9, D3DADAPTER_DEFAULT,
             D3DCREATE_HARDWARE_VERTEXPROCESSING, D3D_SDK_VERSION,
-        }, d3d9caps::D3DPRESENT_INTERVAL_IMMEDIATE, d3d9types::{D3DCLEAR_TARGET, D3DCOLOR_ARGB, D3DDEVTYPE_HAL, D3DFMT_A8R8G8B8, D3DPRESENT_PARAMETERS, D3DRECT, D3DSWAPEFFECT_DISCARD}, minwindef::{LPARAM, LRESULT, WPARAM}, windef::{HWND, RECT}}, um::{
+        },
+        d3d9caps::D3DPRESENT_INTERVAL_IMMEDIATE,
+        d3d9types::{
+            D3DCLEAR_TARGET, D3DCOLOR_ARGB, D3DDEVTYPE_HAL, D3DFMT_A8R8G8B8, D3DPRESENT_PARAMETERS,
+            D3DRECT, D3DSWAPEFFECT_DISCARD,
+        },
+        minwindef::{LPARAM, LRESULT, WPARAM},
+        windef::{HWND, RECT},
+    },
+    um::{
         dwmapi::DwmExtendFrameIntoClientArea,
         uxtheme::MARGINS,
         wingdi::{CreateSolidBrush, RGB},
         winuser::{
-            CreateWindowExA, DefWindowProcA, DestroyWindow, GetWindowRect, LoadCursorW,
-            RegisterClassExA, SetLayeredWindowAttributes, SetWindowPos, ShowWindow, CS_HREDRAW,
-            CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOSIZE, SW_SHOW,
-            WM_DESTROY, WNDCLASSEXA, WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_POPUP, WS_VISIBLE,
+            CreateWindowExA, DefWindowProcA, DestroyWindow, DisableProcessWindowsGhosting,
+            GetWindowRect, LoadCursorW, RegisterClassExA, SetLayeredWindowAttributes, SetWindowPos,
+            ShowWindow, CS_HREDRAW, CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOSIZE,
+            SW_SHOW, WM_DESTROY, WNDCLASSEXA, WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_POPUP,
+            WS_VISIBLE,
         },
-    }};
+    },
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct Overlay {
@@ -25,13 +36,18 @@ pub struct Overlay {
 }
 
 #[no_mangle]
-unsafe extern "system" fn wnd_proc(wnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+unsafe extern "system" fn wnd_proc(
+    _wnd: HWND,
+    msg: u32,
+    _wparam: WPARAM,
+    _lparam: LPARAM,
+) -> LRESULT {
     match msg {
         WM_DESTROY => std::process::exit(0),
         _ => {}
     }
 
-    DefWindowProcA(wnd, msg, wparam, lparam)
+    DefWindowProcA(_wnd, msg, _wparam, _lparam)
 }
 
 impl Overlay {
@@ -134,13 +150,19 @@ impl Overlay {
 
     /// Get rectangle of target window
     pub fn get_rect(&self) -> RECT {
-        let rect = [0i8; std::mem::size_of::<RECT>()].as_mut_ptr() as *mut RECT;
+        let mut rectangle = RECT {
+            bottom: 0,
+            left: 0,
+            right: 0,
+            top: 0,
+        };
 
         // get dimensions of target window
         unsafe {
-            GetWindowRect(self.get_target(), rect);
-            rect.read()
+            GetWindowRect(self.get_target(), &mut rectangle);
         }
+
+        rectangle
     }
 
     pub fn get_overlay(&self) -> HWND {
@@ -167,17 +189,19 @@ impl Overlay {
         let rect = self.get_rect();
 
         // Create paramaters for present
-        let mut present = unsafe { D3DPRESENT_PARAMETERS {
-            BackBufferCount: 1,
-            SwapEffect: D3DSWAPEFFECT_DISCARD,
-            hDeviceWindow: self.get_overlay(),
-            PresentationInterval: D3DPRESENT_INTERVAL_IMMEDIATE,
-            BackBufferFormat: D3DFMT_A8R8G8B8,
-            Windowed: 1,
-            BackBufferWidth: (rect.right - rect.left) as u32,
-            BackBufferHeight: (rect.bottom - rect.top) as u32,
-            ..core::mem::zeroed()
-        }};
+        let mut present = unsafe {
+            D3DPRESENT_PARAMETERS {
+                BackBufferCount: 1,
+                SwapEffect: D3DSWAPEFFECT_DISCARD,
+                hDeviceWindow: self.get_overlay(),
+                PresentationInterval: D3DPRESENT_INTERVAL_IMMEDIATE,
+                BackBufferFormat: D3DFMT_A8R8G8B8,
+                Windowed: 1,
+                BackBufferWidth: (rect.right - rect.left) as u32,
+                BackBufferHeight: (rect.bottom - rect.top) as u32,
+                ..core::mem::zeroed()
+            }
+        };
 
         let mut device = std::ptr::null_mut();
 
@@ -217,6 +241,10 @@ impl Overlay {
             lpszClassName: native_str!("win-overlay::overlay"),
             hIconSm: std::ptr::null_mut(),
         };
+
+        unsafe {
+            DisableProcessWindowsGhosting();
+        }
 
         // register it
         if unsafe { RegisterClassExA(&mut wc as *mut _) } == 0 {
