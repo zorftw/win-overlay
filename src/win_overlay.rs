@@ -19,7 +19,7 @@ use winapi::{
         winuser::{
             CreateWindowExA, DefWindowProcA, DestroyWindow, DisableProcessWindowsGhosting,
             GetWindowRect, LoadCursorW, RegisterClassExA, SetLayeredWindowAttributes, SetWindowPos,
-            ShowWindow, CS_HREDRAW, CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA, SWP_NOSIZE,
+            ShowWindow, CS_HREDRAW, CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_ALPHA,
             SW_SHOW, WM_DESTROY, WNDCLASSEXA, WS_EX_LAYERED, WS_EX_TRANSPARENT, WS_POPUP,
             WS_VISIBLE,
         },
@@ -60,10 +60,10 @@ impl Overlay {
                 self.get_overlay(),
                 HWND_TOPMOST,
                 rect.left,
-                rect.top,
+                rect.top + 12,
                 rect.right - rect.left,
                 rect.bottom - rect.top,
-                SWP_NOSIZE,
+                0,
             );
         }
     }
